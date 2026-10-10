@@ -68,12 +68,8 @@ function Deals() {
     <main className="deals-page">
       <section className="section">
         <div className="container">
-
           <div className="section-heading text-center">
-            <h1 className="section-title">
-              Best Deals & Offers
-            </h1>
-
+            <h1 className="section-title">Best Deals &amp; Offers</h1>
             <p className="section-subtitle">
               Save more on your next journey with exclusive
               StaySphere deals.
@@ -82,16 +78,9 @@ function Deals() {
 
           <div className="deals-page-grid">
             {deals.map((deal) => (
-              <article
-                className="deals-page-card"
-                key={deal.id}
-              >
+              <article className="deals-page-card" key={deal.id}>
                 <div className="deals-page-image">
-                  <img
-                    src={deal.image}
-                    alt={deal.title}
-                  />
-
+                  <img src={deal.image} alt={deal.title} />
                   <span>{deal.discount}</span>
                 </div>
 
@@ -101,14 +90,13 @@ function Deals() {
                   </span>
 
                   <h2>{deal.title}</h2>
-
                   <p>{deal.description}</p>
 
                   <div className="deals-page-bottom">
                     <strong>{deal.price}</strong>
 
                     <Link
-                      to={`/hotel/${deal.id <= 3 ? deal.id : 1}`}
+                      to="/hotels"
                       className="deals-page-button"
                     >
                       View Deal
@@ -122,7 +110,6 @@ function Deals() {
           <div className="deals-page-cta">
             <div>
               <h2>Looking for more great stays?</h2>
-
               <p>
                 Explore all available hotels and find the perfect
                 place for your next trip.
@@ -136,7 +123,6 @@ function Deals() {
               Explore Hotels
             </Link>
           </div>
-
         </div>
       </section>
     </main>
