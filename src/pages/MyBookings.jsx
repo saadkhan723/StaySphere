@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import bookingService from "../services/bookingService.js";
 
 function MyBookings() {
   const [activeTab, setActiveTab] = useState("All Bookings");
@@ -27,6 +28,9 @@ function MyBookings() {
 
             return {
               id: booking._id,
+              guestName: booking.guestName || "N/A",
+              email: booking.email || "N/A",
+              phone: booking.phone || "N/A",
               hotel: hotel.name || "Hotel",
               hotelId: hotel._id || "",
               image: hotel.image || "",
@@ -36,6 +40,7 @@ function MyBookings() {
               guests: booking.guests,
               rooms: booking.rooms,
               total: booking.total,
+              taxes: booking.taxes,
               status: booking.status || "Pending",
               roomPrice: booking.roomPrice,
               notes: booking.notes || "",
@@ -57,6 +62,59 @@ function MyBookings() {
     fetchBookings();
   }, []);
 
+  async function handleCancelBooking(bookingId) {
+    const confirmed = window.confirm(
+      "Are you sure you want to cancel this booking?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const data = await bookingService.cancelBooking(bookingId);
+
+      if (!data.success) {
+        throw new Error(
+          data.message || "Booking cancellation failed."
+        );
+      }
+
+      setBookings((currentBookings) =>
+        currentBookings.map((booking) =>
+          booking.id === bookingId
+            ? { ...booking, status: "Cancelled" }
+            : booking
+        )
+      );
+
+      window.alert("Booking cancelled successfully.");
+    } catch (err) {
+      window.alert(
+        err.message || "Could not cancel booking."
+      );
+    }
+  }
+
+  function handleViewDetails(booking) {
+    window.alert(
+      `Booking Details\n\n` +
+      `Booking ID: ${booking.id}\n` +
+      `Guest: ${booking.guestName}\n` +
+      `Email: ${booking.email}\n` +
+      `Phone: ${booking.phone}\n` +
+      `Hotel: ${booking.hotel}\n` +
+      `Location: ${booking.location}\n` +
+      `Status: ${booking.status}\n` +
+      `Check-in: ${formatDate(booking.checkIn)}\n` +
+      `Check-out: ${formatDate(booking.checkOut)}\n` +
+      `Guests: ${booking.guests}\n` +
+      `Rooms: ${booking.rooms}\n` +
+      `Room price per night: ${formatPrice(booking.roomPrice)}\n` +
+      `Taxes: ${formatPrice(booking.taxes)}\n` +
+      `Total: ${formatPrice(booking.total)}\n` +
+      `Notes: ${booking.notes || "None"}`
+    );
+  }
+
   function formatDate(date) {
     if (!date) return "N/A";
 
@@ -73,9 +131,7 @@ function MyBookings() {
   }
 
   const filteredBookings = bookings.filter((booking) => {
-    if (activeTab === "All Bookings") {
-      return true;
-    }
+    if (activeTab === "All Bookings") return true;
 
     if (activeTab === "Upcoming") {
       return (
@@ -233,16 +289,12 @@ function MyBookings() {
                     <div className="booking-history-details">
                       <div>
                         <span>Check-in</span>
-                        <strong>
-                          {formatDate(booking.checkIn)}
-                        </strong>
+                        <strong>{formatDate(booking.checkIn)}</strong>
                       </div>
 
                       <div>
                         <span>Check-out</span>
-                        <strong>
-                          {formatDate(booking.checkOut)}
-                        </strong>
+                        <strong>{formatDate(booking.checkOut)}</strong>
                       </div>
 
                       <div>
@@ -259,9 +311,7 @@ function MyBookings() {
                     <div className="booking-history-bottom">
                       <div>
                         <span>Total</span>
-                        <strong>
-                          {formatPrice(booking.total)}
-                        </strong>
+                        <strong>{formatPrice(booking.total)}</strong>
                       </div>
 
                       <div className="booking-history-actions">
@@ -273,22 +323,21 @@ function MyBookings() {
 
                         <button
                           type="button"
-                          onClick={() =>
-                            window.alert(
-                              `Booking ID: ${booking.id}\n` +
-                              `Hotel: ${booking.hotel}\n` +
-                              `Location: ${booking.location}\n` +
-                              `Status: ${booking.status}\n` +
-                              `Check-in: ${formatDate(booking.checkIn)}\n` +
-                              `Check-out: ${formatDate(booking.checkOut)}\n` +
-                              `Guests: ${booking.guests}\n` +
-                              `Rooms: ${booking.rooms}\n` +
-                              `Total: ${formatPrice(booking.total)}`
-                            )
-                          }
+                          onClick={() => handleViewDetails(booking)}
                         >
                           View Details
                         </button>
+
+                        {booking.status !== "Cancelled" && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCancelBooking(booking.id)
+                            }
+                          >
+                            Cancel Booking
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

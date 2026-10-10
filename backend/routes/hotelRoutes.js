@@ -7,7 +7,7 @@ const Hotel = require("../models/Hotel");
 // GET: Sab hotels hasil karo
 router.get("/", async (req, res) => {
   try {
-    const hotels = await Hotel.find();
+    const hotels = await Hotel.find().sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -23,8 +23,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-
- // POST: Naya hotel database mein save karo
+// POST: Naya hotel database mein save karo
 router.post("/", async (req, res) => {
   try {
     const hotel = await Hotel.create(req.body);
@@ -63,6 +62,65 @@ router.get("/:id", async (req, res) => {
     res.status(400).json({
       success: false,
       message: "Hotel ID invalid hai.",
+      error: error.message,
+    });
+  }
+});
+
+// PUT: Hotel ki details update karo
+router.put("/:id", async (req, res) => {
+  try {
+    const hotel = await Hotel.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!hotel) {
+      return res.status(404).json({
+        success: false,
+        message: "Hotel nahi mila.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Hotel successfully update ho gaya!",
+      hotel,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: "Hotel update nahi ho saka.",
+      error: error.message,
+    });
+  }
+});
+
+// DELETE: Hotel database se delete karo
+router.delete("/:id", async (req, res) => {
+  try {
+    const hotel = await Hotel.findByIdAndDelete(req.params.id);
+
+    if (!hotel) {
+      return res.status(404).json({
+        success: false,
+        message: "Hotel nahi mila.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Hotel successfully delete ho gaya!",
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: "Hotel delete nahi ho saka.",
+      error: error.message,
     });
   }
 });

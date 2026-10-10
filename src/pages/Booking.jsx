@@ -1,9 +1,12 @@
+
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import bookingService from "../services/bookingService.js";
 
 function Booking() {
   const navigate = useNavigate();
   const location = useLocation();
+
   const tourBooking = location.state?.tour || null;
   const selectedHotel = location.state?.hotel || null;
 
@@ -19,27 +22,27 @@ function Booking() {
     notes: "",
   });
 
- const roomPrice = Number(selectedHotel?.pricePerNight || 25000);
+  const roomPrice = Number(selectedHotel?.pricePerNight || 25000);
 
-const checkInDate = formData.checkIn
-  ? new Date(formData.checkIn)
-  : null;
+  const checkInDate = formData.checkIn
+    ? new Date(`${formData.checkIn}T00:00:00`)
+    : null;
 
-const checkOutDate = formData.checkOut
-  ? new Date(formData.checkOut)
-  : null;
+  const checkOutDate = formData.checkOut
+    ? new Date(`${formData.checkOut}T00:00:00`)
+    : null;
 
-const nights =
-  checkInDate && checkOutDate && checkOutDate > checkInDate
-    ? Math.ceil(
-        (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
-      )
-    : 0;
+  const nights =
+    checkInDate && checkOutDate && checkOutDate > checkInDate
+      ? Math.ceil(
+          (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
+        )
+      : 0;
 
-const taxes = 2500 * Number(formData.rooms);
+  const taxes = 2500 * Number(formData.rooms);
 
-const total =
-  roomPrice * Number(formData.rooms) * (nights || 1) + taxes;
+  const total =
+    roomPrice * Number(formData.rooms) * (nights || 1) + taxes;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -50,85 +53,70 @@ const total =
     }));
   };
 
-  
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (
-    !formData.firstName ||
-    !formData.lastName ||
-    !formData.email ||
-    !formData.phone ||
-    !formData.checkIn ||
-    !formData.checkOut
-  ) {
-    alert("Please complete all required fields.");
-    return;
-  }
+    if (
+      !formData.firstName.trim() ||
+      !formData.lastName.trim() ||
+      !formData.email.trim() ||
+      !formData.phone.trim() ||
+      !formData.checkIn ||
+      !formData.checkOut
+    ) {
+      alert("Please complete all required fields.");
+      return;
+    }
 
-  if (new Date(formData.checkOut) <= new Date(formData.checkIn)) {
-    alert("Check-out date must be after check-in date.");
-    return;
-  }
+    if (new Date(formData.checkOut) <= new Date(formData.checkIn)) {
+      alert("Check-out date must be after check-in date.");
+      return;
+    }
 
-  if (!selectedHotel?.id) {
-    alert("Please select a hotel from the hotel details page.");
-    return;
-  }
+    const hotelId = selectedHotel?._id || selectedHotel?.id;
 
-  try {
-    const response = await fetch("http://localhost:5000/api/bookings", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        hotel: selectedHotel.id,
-        guestName: `${formData.firstName} ${formData.lastName}`,
-        email: formData.email,
-        phone: formData.phone,
+    if (!hotelId) {
+      alert("Please select a hotel from the hotel details page.");
+      return;
+    }
+
+    try {
+      const data = await bookingService.createBooking({
+        hotel: hotelId,
+        guestName: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
         checkIn: formData.checkIn,
         checkOut: formData.checkOut,
         guests: Number(formData.guests),
         rooms: Number(formData.rooms),
-        notes: formData.notes,
-      }),
-    });
+        notes: formData.notes.trim(),
+      });
 
-    const data = await response.json();
+      if (!data?.success || !data?.booking?._id) {
+        throw new Error(data?.message || "Booking could not be saved.");
+      }
 
-    if (!response.ok || !data.success) {
-      throw new Error(data.message || "Booking failed.");
+      navigate("/booking-confirmation", {
+        state: {
+          booking: {
+            ...data.booking,
+            hotelName:
+              data.booking.hotel?.name || selectedHotel.name,
+            location:
+              data.booking.hotel?.location || selectedHotel.location,
+          },
+        },
+      });
+    } catch (error) {
+      alert(error.message || "Booking save nahi ho saki.");
     }
-
-    navigate("/booking-confirmation", {
-      state: {
-        guestName: `${formData.firstName} ${formData.lastName}`,
-        email: formData.email,
-        phone: formData.phone,
-        checkIn: formData.checkIn,
-        checkOut: formData.checkOut,
-        guests: formData.guests,
-        rooms: formData.rooms,
-        notes: formData.notes,
-        hotelName: selectedHotel.name,
-        location: selectedHotel.location,
-        roomPrice: data.booking.roomPrice,
-        taxes: data.booking.taxes,
-        total: data.booking.total,
-        bookingId: data.booking._id,
-      },
-    });
-  } catch (error) {
-    alert(error.message || "Booking save nahi ho saki.");
-  }
-};
+  };
 
   return (
     <main className="booking-page">
       <section className="section">
         <div className="container">
-
           <div className="booking-breadcrumb">
             <Link to="/hotels">Hotels</Link>
             <span>/</span>
@@ -136,7 +124,6 @@ const handleSubmit = async (e) => {
           </div>
 
           <div className="booking-layout">
-
             <form
               className="booking-form-card"
               onSubmit={handleSubmit}
@@ -151,12 +138,8 @@ const handleSubmit = async (e) => {
                 <h2>Guest Information</h2>
 
                 <div className="booking-form-grid">
-
                   <div className="booking-field">
-                    <label htmlFor="firstName">
-                      First Name
-                    </label>
-
+                    <label htmlFor="firstName">First Name</label>
                     <input
                       id="firstName"
                       name="firstName"
@@ -164,15 +147,13 @@ const handleSubmit = async (e) => {
                       placeholder="Enter first name"
                       value={formData.firstName}
                       onChange={handleChange}
+                      autoComplete="given-name"
                       required
                     />
                   </div>
 
                   <div className="booking-field">
-                    <label htmlFor="lastName">
-                      Last Name
-                    </label>
-
+                    <label htmlFor="lastName">Last Name</label>
                     <input
                       id="lastName"
                       name="lastName"
@@ -180,15 +161,13 @@ const handleSubmit = async (e) => {
                       placeholder="Enter last name"
                       value={formData.lastName}
                       onChange={handleChange}
+                      autoComplete="family-name"
                       required
                     />
                   </div>
 
                   <div className="booking-field">
-                    <label htmlFor="email">
-                      Email Address
-                    </label>
-
+                    <label htmlFor="email">Email Address</label>
                     <input
                       id="email"
                       name="email"
@@ -196,15 +175,13 @@ const handleSubmit = async (e) => {
                       placeholder="Enter email address"
                       value={formData.email}
                       onChange={handleChange}
+                      autoComplete="email"
                       required
                     />
                   </div>
 
                   <div className="booking-field">
-                    <label htmlFor="phone">
-                      Phone Number
-                    </label>
-
+                    <label htmlFor="phone">Phone Number</label>
                     <input
                       id="phone"
                       name="phone"
@@ -212,10 +189,10 @@ const handleSubmit = async (e) => {
                       placeholder="Enter phone number"
                       value={formData.phone}
                       onChange={handleChange}
+                      autoComplete="tel"
                       required
                     />
                   </div>
-
                 </div>
               </div>
 
@@ -223,16 +200,13 @@ const handleSubmit = async (e) => {
                 <h2>Stay Details</h2>
 
                 <div className="booking-form-grid">
-
                   <div className="booking-field">
-                    <label htmlFor="checkIn">
-                      Check-in
-                    </label>
-
+                    <label htmlFor="checkIn">Check-in</label>
                     <input
                       id="checkIn"
                       name="checkIn"
                       type="date"
+                      min={new Date().toLocaleDateString("en-CA")}
                       value={formData.checkIn}
                       onChange={handleChange}
                       required
@@ -240,14 +214,12 @@ const handleSubmit = async (e) => {
                   </div>
 
                   <div className="booking-field">
-                    <label htmlFor="checkOut">
-                      Check-out
-                    </label>
-
+                    <label htmlFor="checkOut">Check-out</label>
                     <input
                       id="checkOut"
                       name="checkOut"
                       type="date"
+                      min={formData.checkIn || new Date().toLocaleDateString("en-CA")}
                       value={formData.checkOut}
                       onChange={handleChange}
                       required
@@ -255,10 +227,7 @@ const handleSubmit = async (e) => {
                   </div>
 
                   <div className="booking-field">
-                    <label htmlFor="guests">
-                      Guests
-                    </label>
-
+                    <label htmlFor="guests">Guests</label>
                     <select
                       id="guests"
                       name="guests"
@@ -274,10 +243,7 @@ const handleSubmit = async (e) => {
                   </div>
 
                   <div className="booking-field">
-                    <label htmlFor="rooms">
-                      Rooms
-                    </label>
-
+                    <label htmlFor="rooms">Rooms</label>
                     <select
                       id="rooms"
                       name="rooms"
@@ -290,7 +256,6 @@ const handleSubmit = async (e) => {
                       <option value="4">4 Rooms</option>
                     </select>
                   </div>
-
                 </div>
               </div>
 
@@ -298,10 +263,7 @@ const handleSubmit = async (e) => {
                 <h2>Special Requests</h2>
 
                 <div className="booking-field">
-                  <label htmlFor="notes">
-                    Additional Notes
-                  </label>
-
+                  <label htmlFor="notes">Additional Notes</label>
                   <textarea
                     id="notes"
                     name="notes"
@@ -309,7 +271,7 @@ const handleSubmit = async (e) => {
                     placeholder="Any special requests?"
                     value={formData.notes}
                     onChange={handleChange}
-                  ></textarea>
+                  />
                 </div>
               </div>
 
@@ -322,7 +284,6 @@ const handleSubmit = async (e) => {
             </form>
 
             <aside className="booking-summary-card">
-
               <span className="booking-summary-label">
                 Your stay
               </span>
@@ -330,82 +291,75 @@ const handleSubmit = async (e) => {
               <h2>{selectedHotel?.name || "Select a hotel"}</h2>
 
               <p className="booking-summary-location">
-             {selectedHotel?.location || "Choose a hotel to continue"}
+                {selectedHotel?.location || "Choose a hotel to continue"}
               </p>
 
               <div className="booking-summary-details">
-
                 <div>
                   <span>Check-in</span>
-                  <strong>
-                    {formData.checkIn || "Select date"}
-                  </strong>
+                  <strong>{formData.checkIn || "Select date"}</strong>
                 </div>
 
                 <div>
                   <span>Check-out</span>
-                  <strong>
-                    {formData.checkOut || "Select date"}
-                  </strong>
+                  <strong>{formData.checkOut || "Select date"}</strong>
                 </div>
 
                 <div>
                   <span>Guests</span>
                   <strong>
                     {formData.guests}{" "}
-                    {Number(formData.guests) === 1
-                      ? "Guest"
-                      : "Guests"}
+                    {Number(formData.guests) === 1 ? "Guest" : "Guests"}
                   </strong>
                 </div>
 
                 <div>
-                  <span>Room</span>
+                  <span>Rooms</span>
                   <strong>
                     {formData.rooms}{" "}
-                    {Number(formData.rooms) === 1
-                      ? "Room"
-                      : "Rooms"}
+                    {Number(formData.rooms) === 1 ? "Room" : "Rooms"}
                   </strong>
                 </div>
 
+                <div>
+                  <span>Nights</span>
+                  <strong>{nights}</strong>
+                </div>
               </div>
 
               <div className="booking-price-breakdown">
+                <div>
+                  <span>Price per night</span>
+                  <strong>PKR {roomPrice.toLocaleString()}</strong>
+                </div>
 
                 <div>
-                  <span>Room price</span>
+                  <span>Room charges</span>
                   <strong>
-                    PKR {roomPrice.toLocaleString()}
+                    PKR {(roomPrice * Number(formData.rooms) * (nights || 1)).toLocaleString()}
                   </strong>
                 </div>
 
                 <div>
-                  <span>Taxes & fees</span>
-                  <strong>
-                    PKR {taxes.toLocaleString()}
-                  </strong>
+                  <span>Taxes &amp; fees</span>
+                  <strong>PKR {taxes.toLocaleString()}</strong>
                 </div>
 
                 <div className="booking-total">
                   <span>Total</span>
-                  <strong>
-                    PKR {total.toLocaleString()}
-                  </strong>
+                  <strong>PKR {total.toLocaleString()}</strong>
                 </div>
-
               </div>
 
               <p className="booking-secure">
                 🔒 Secure booking · No payment required yet
               </p>
-
             </aside>
-
           </div>
         </div>
       </section>
     </main>
   );
 }
+
 export default Booking;

@@ -1,3 +1,4 @@
+import hotelService from "../services/hotelService.js";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
@@ -14,17 +15,14 @@ function HotelDetails() {
         setLoading(true);
         setError("");
 
-        const response = await fetch(
-          `http://localhost:5000/api/hotels/${id}`
-        );
+      const data = await hotelService.getHotelById(id);
 
-        const data = await response.json();
+if (!data.success || !data.hotel) {
+  throw new Error(data.message || "Hotel nahi mila.");
+}
 
-        if (!response.ok || !data.success) {
-          throw new Error(data.message || "Hotel nahi mila.");
-        }
+setHotel(data.hotel);
 
-        setHotel(data.hotel);
       } catch (err) {
         setError(err.message || "Hotel load nahi ho saka.");
       } finally {
